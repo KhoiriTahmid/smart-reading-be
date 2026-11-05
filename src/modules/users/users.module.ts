@@ -10,6 +10,6 @@ import { DeviceModel } from '../devices/devices.entity';
   imports: [SequelizeModule.forFeature([UserModel, RoleModel, DeviceModel])],
   providers: [UsersService],
   controllers: [UsersController],
+  exports: [UsersService],
 })
 export class UsersModule {}
-

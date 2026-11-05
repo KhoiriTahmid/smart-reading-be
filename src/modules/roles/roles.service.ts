@@ -21,7 +21,8 @@ export class RolesService {
     private readonly roleModel: typeof RoleModel,
   ) {}
 
-  async findAll({ search, limit, offset, status }: FindAllRoleRequest) {
+  async findAll(params: FindAllRoleRequest) {
+    const { search, limit, offset, status } = params;
     let where: Record<string, any> = {};
 
     if (status === 'archive') where.deletedAt = { [Op.not]: null };
@@ -50,10 +51,14 @@ export class RolesService {
     };
 
     const { count, rows } = await this.roleModel.findAndCountAll(options);
-    const results = rows.map((v) => v.get());
+    const results = rows.map((v) =>
+      v.roleId === process.env.ROLE_ADMIN_ID
+        ? { ...v.get(), locked: true }
+        : v.get(),
+    );
 
     return {
-      ...generatePaginationResponse(limit, offset, count),
+      ...generatePaginationResponse({ count, query: params }),
       results,
     };
   }
@@ -65,7 +70,7 @@ export class RolesService {
         {
           model: UserModel,
           as: 'createdByUser',
-          attributes: { exclude: ['hashedPassword'] },
+          attributes: { exclude: ['passwordHash', 'refreshTokenHash'] },
         },
       ],
     });

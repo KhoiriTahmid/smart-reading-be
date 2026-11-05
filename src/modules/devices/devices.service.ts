@@ -21,13 +21,8 @@ export class DevicesService {
     private readonly deviceModel: typeof DeviceModel,
   ) {}
 
-  async findAll({
-    search,
-    limit,
-    offset,
-    status,
-    connectionStatus,
-  }: FindAllDeviceRequest) {
+  async findAll(params: FindAllDeviceRequest) {
+    const { search, limit, offset, status, connectionStatus } = params;
     let where: Record<string, any> = {};
 
     if (status === 'archive') where.deletedAt = { [Op.not]: null };
@@ -57,7 +52,7 @@ export class DevicesService {
     const results = rows.map((v) => v.get());
 
     return {
-      ...generatePaginationResponse(limit, offset, count),
+      ...generatePaginationResponse({ count, query: params }),
       results,
     };
   }
@@ -69,7 +64,7 @@ export class DevicesService {
         {
           model: UserModel,
           as: 'createdByUser',
-          attributes: { exclude: ['hashedPassword'] },
+          attributes: { exclude: ['passwordHash', 'refreshTokenHash'] },
         },
       ],
     });

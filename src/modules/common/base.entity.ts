@@ -29,7 +29,5 @@ export class BaseModelWithMetaUser extends BaseModel {
     type: DataType.JSONB,
     allowNull: true,
   })
-  metaUser: any;
+  declare metaUser: any;
 }
-
-

@@ -11,7 +11,7 @@ module.exports = {
         role_id: ROLE_ADMIN_ID,
         name: 'Super Admin',
         description: 'Super Admin',
-        permissions: JSON.stringify({ FULL_ACCESS: 'TRUE' }),
+        permissions: JSON.stringify({ FULL_ACCESS: true }),
         created_by_user_id: null,
         meta_user: null,
         created_at: new Date(),

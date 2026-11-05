@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { UserModel } from './users.entity';
 import {
-  CreateUserRequest,
-  UpdateUserRequest,
   FindAllUserRequest,
   FindOneUserRequest,
   DeleteUserRequest,
+  UpdateProfileRequest,
+  CreateUserRequestByEmail,
+  CreateUserRequestByGoogle,
 } from './users.contract';
 import { FindAndCountOptions, Op } from 'sequelize';
 import { generatePaginationResponse } from 'src/helpers/parse';
@@ -14,6 +19,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { BaseUserInfoRequest } from '../common/base.contract';
 import { RoleModel } from '../roles/roles.entity';
 import { DeviceModel } from '../devices/devices.entity';
+import { hash } from 'bcrypt';
+
+const RETURN_COLUMNS_FOR_LOGIN = ['email', 'name', 'userId'];
+const EXCLUDED_USER_COLUMNS = [
+  'passwordHash',
+  'refreshTokenHash',
+  'providerId',
+];
+const EXCLUDED_USER_COLUMNS_WITH_REFRESH = ['passwordHash', 'providerId'];
 
 @Injectable()
 export class UsersService {
@@ -22,7 +36,8 @@ export class UsersService {
     private readonly userModel: typeof UserModel,
   ) {}
 
-  async findAll({ search, limit, offset, status }: FindAllUserRequest) {
+  async findAll(params: FindAllUserRequest) {
+    const { search, limit, offset, status } = params;
     let where: Record<string, any> = {};
 
     if (status === 'archive') where.deletedAt = { [Op.not]: null };
@@ -40,9 +55,14 @@ export class UsersService {
       where,
       limit,
       offset,
+      attributes: { exclude: EXCLUDED_USER_COLUMNS },
       include: [
         { model: RoleModel, as: 'role', attributes: ['roleId', 'name'] },
-        { model: DeviceModel, as: 'device', attributes: ['deviceId', 'serialNumber'] },
+        {
+          model: DeviceModel,
+          as: 'device',
+          attributes: ['deviceId', 'serialNumber'],
+        },
       ],
       order: [
         ['createdAt', 'DESC'],
@@ -55,14 +75,19 @@ export class UsersService {
     const results = rows.map((v) => v.get());
 
     return {
-      ...generatePaginationResponse(limit, offset, count),
+      ...generatePaginationResponse({ count, query: params }),
       results,
     };
   }
 
-  async findOne({ userId }: FindOneUserRequest) {
+  async findOne({ userId }: FindOneUserRequest, returnRefreshToken?: boolean) {
     const result = await this.userModel.findOne({
       where: { userId },
+      attributes: {
+        exclude: returnRefreshToken
+          ? EXCLUDED_USER_COLUMNS_WITH_REFRESH
+          : EXCLUDED_USER_COLUMNS,
+      },
       include: [
         { model: RoleModel, as: 'role', attributes: { exclude: [] } },
         { model: DeviceModel, as: 'device', attributes: { exclude: [] } },
@@ -72,20 +97,100 @@ export class UsersService {
     return result;
   }
 
-  async create(params: CreateUserRequest & BaseUserInfoRequest) {
+  async findOneByEmail(email: string) {
+    const result = await this.userModel.findOne({
+      where: { email },
+      attributes: ['passwordHash', ...RETURN_COLUMNS_FOR_LOGIN],
+      include: {
+        model: RoleModel,
+        attributes: ['permissions'],
+        as: 'role',
+      },
+    });
+    return result;
+  }
+
+  async create(
+    params: CreateUserRequestByEmail & Partial<BaseUserInfoRequest>,
+  ) {
+    const roleId = params.roleId || process.env.ROLE_USER_ID;
+    if (!params.password || !roleId) throw new ForbiddenException();
+
+    const passwordHash = await hash(
+      params.password,
+      Number(process.env.BCRYPT_SALT_ROUNDS),
+    );
     const result = await this.userModel.create({
       ...params,
+      passwordHash,
+      roleId,
+      authProvider: 'email',
       userId: uuidv4(),
     });
+
+    const user = await this.userModel.findOne({
+      where: { userId: result.userId },
+      attributes: RETURN_COLUMNS_FOR_LOGIN,
+      include: {
+        model: RoleModel,
+        attributes: ['permissions'],
+        as: 'role',
+      },
+    });
+    if (!user) throw new NotFoundException();
+    return user;
+  }
+
+  async createByGoogle(params: CreateUserRequestByGoogle) {
+    const roleId = process.env.ROLE_USER_ID;
+    if (!params.providerId || !roleId) throw new ForbiddenException();
+
+    const data = {
+      ...params,
+      roleId,
+      authProvider: 'google',
+      userId: uuidv4(),
+    };
+    const result = await this.userModel.create(data, {});
+
+    const user = await this.userModel.findOne({
+      where: { userId: result.userId },
+      attributes: RETURN_COLUMNS_FOR_LOGIN,
+      include: {
+        model: RoleModel,
+        attributes: ['permissions'],
+        as: 'role',
+      },
+    });
+    if (!user) throw new NotFoundException();
+    return user;
+  }
+
+  async updateRefreshToken({
+    userId,
+    refreshToken,
+  }: {
+    userId: string;
+    refreshToken?: string;
+  }) {
+    const refreshTokenHash = refreshToken?.length
+      ? await hash(refreshToken, Number(process.env.BCRYPT_SALT_ROUNDS))
+      : null;
+
+    const result = await this.userModel.update(
+      { refreshTokenHash },
+      { where: { userId } },
+    );
     return result;
   }
 
   async update({
     userId,
     ...params
-  }: UpdateUserRequest & { userId: string }) {
+  }: UpdateProfileRequest & { userId: string }) {
     const result = await this.userModel.update(params, {
       where: { userId },
+      returning: false,
     });
     return result;
   }
@@ -106,4 +211,3 @@ export class UsersService {
     return 'success';
   }
 }
-

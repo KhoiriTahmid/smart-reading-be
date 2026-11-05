@@ -3,41 +3,54 @@ import {
   Controller,
   Delete,
   Get,
-  Inject,
   Param,
   Patch,
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
-  CreateUserRequest,
+  CreateUserRequestByEmail,
   DeleteUserRequest,
   FindAllUserRequest,
   FindOneUserRequest,
-  UpdateUserRequest,
+  UpdateProfileRequest,
 } from './users.contract';
+import { Permissions } from 'src/decorators/permission.decorator';
+import { PermissionGuard } from 'src/guards/permission.guard';
 
+@ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
+@UseGuards(AuthGuard('jwt'), PermissionGuard)
 export class UsersController {
-  constructor(
-    @Inject()
-    private readonly usersService: UsersService,
-  ) {}
+  constructor(private readonly usersService: UsersService) {}
 
   @Get()
+  @Permissions([
+    'USER.LIST',
+    'USER.DETAIL',
+    'USER.CREATE',
+    'USER.UPDATE',
+    'USER.DELETE',
+  ])
   async findAll(@Query() query: FindAllUserRequest) {
     return await this.usersService.findAll(query);
   }
 
   @Get(':userId')
+  @Permissions(['USER.DETAIL'])
   async findOne(@Param() params: FindOneUserRequest) {
     return await this.usersService.findOne(params);
   }
 
   @Post()
-  async create(@Body() body: CreateUserRequest, @Req() req: any) {
+  @Permissions(['USER.CREATE'])
+  async create(@Body() body: CreateUserRequestByEmail, @Req() req: any) {
     return await this.usersService.create({
       ...body,
       createdByUserId: req.user.userId,
@@ -46,9 +59,10 @@ export class UsersController {
   }
 
   @Patch(':userId')
+  @Permissions(['USER.UPDATE'])
   async update(
     @Param() params: FindOneUserRequest,
-    @Body() body: UpdateUserRequest,
+    @Body() body: UpdateProfileRequest,
   ) {
     return await this.usersService.update({
       ...body,
@@ -57,11 +71,13 @@ export class UsersController {
   }
 
   @Post(':userId/restore')
+  @Permissions(['USER.DELETE'])
   async restore(@Param() params: FindOneUserRequest) {
     return await this.usersService.restore(params.userId);
   }
 
   @Delete(':userId')
+  @Permissions(['USER.DELETE'])
   async delete(
     @Param() params: FindOneUserRequest,
     @Query() query: DeleteUserRequest,
@@ -72,4 +88,3 @@ export class UsersController {
     });
   }
 }
-

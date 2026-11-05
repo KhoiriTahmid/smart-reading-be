@@ -3,6 +3,7 @@ import { BaseFindAllRequest } from '../common/base.contract';
 import {
   IsBoolean,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -30,8 +31,8 @@ export class CreateRoleRequest {
 
   @ApiProperty()
   @IsNotEmpty()
-  @IsString()
-  declare permissions: string;
+  @IsObject()
+  declare permissions: object;
 }
 
 export class UpdateRoleRequest {
@@ -47,8 +48,8 @@ export class UpdateRoleRequest {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
-  declare permissions?: string;
+  @IsObject()
+  declare permissions?: object;
 }
 
 export class DeleteRoleRequest {

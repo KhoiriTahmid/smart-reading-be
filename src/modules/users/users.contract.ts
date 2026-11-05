@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { BaseFindAllRequest } from '../common/base.contract';
 import {
   IsBoolean,
@@ -8,6 +8,7 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
@@ -20,7 +21,7 @@ export class FindOneUserRequest {
   declare userId: string;
 }
 
-export class CreateUserRequest {
+export class CreateUserRequestByEmail {
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
@@ -33,20 +34,51 @@ export class CreateUserRequest {
   @IsEmail()
   declare email: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsUUID()
-  declare roleId: string;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsUUID()
-  declare deviceId: string;
+  declare roleId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsUUID()
+  declare deviceId?: string;
+
+  @ApiProperty({ minLength: 8, maxLength: 128 })
+  @ApiProperty()
+  @IsNotEmpty()
   @IsString()
-  declare passwordHash?: string;
+  @MinLength(8)
+  @MaxLength(128)
+  declare password: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  declare metaAdditionalData?: any;
+}
+
+export class CreateUserRequestByGoogle {
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(100)
+  @Transform(({ value }) => value?.trim())
+  declare name: string;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsEmail()
+  declare email: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  declare roleId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  declare deviceId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -58,6 +90,11 @@ export class CreateUserRequest {
   @IsOptional()
   @IsString()
   declare providerId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  declare picture?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -108,6 +145,12 @@ export class UpdateUserRequest {
   @IsOptional()
   declare metaAdditionalData?: any;
 }
+
+export class UpdateProfileRequest extends OmitType(UpdateUserRequest, [
+  'passwordHash',
+  'authProvider',
+  'providerId',
+] as const) {}
 
 export class DeleteUserRequest {
   @ApiPropertyOptional()

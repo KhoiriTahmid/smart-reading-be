@@ -3,13 +3,15 @@ import {
   Controller,
   Delete,
   Get,
-  Inject,
   Param,
   Patch,
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { DevicesService } from './devices.service';
 import {
   CreateDeviceRequest,
@@ -18,25 +20,30 @@ import {
   FindOneDeviceRequest,
   UpdateDeviceRequest,
 } from './devices.contract';
+import { Permissions } from 'src/decorators/permission.decorator';
+import { PermissionGuard } from 'src/guards/permission.guard';
 
+@ApiTags('devices')
+@ApiBearerAuth()
 @Controller('devices')
+@UseGuards(AuthGuard('jwt'), PermissionGuard)
 export class DevicesController {
-  constructor(
-    @Inject()
-    private readonly devicesService: DevicesService,
-  ) {}
+  constructor(private readonly devicesService: DevicesService) {}
 
   @Get()
+  @Permissions(['DEVICE.LIST'])
   async findAll(@Query() query: FindAllDeviceRequest) {
     return await this.devicesService.findAll(query);
   }
 
   @Get(':deviceId')
+  @Permissions(['DEVICE.DETAIL'])
   async findOne(@Param() params: FindOneDeviceRequest) {
     return await this.devicesService.findOne(params);
   }
 
   @Post()
+  @Permissions(['DEVICE.CREATE'])
   async create(@Body() body: CreateDeviceRequest, @Req() req: any) {
     return await this.devicesService.create({
       ...body,
@@ -46,6 +53,7 @@ export class DevicesController {
   }
 
   @Patch(':deviceId')
+  @Permissions(['DEVICE.UPDATE'])
   async update(
     @Param() params: FindOneDeviceRequest,
     @Body() body: UpdateDeviceRequest,
@@ -57,11 +65,13 @@ export class DevicesController {
   }
 
   @Post(':deviceId/restore')
+  @Permissions(['DEVICE.DELETE'])
   async restore(@Param() params: FindOneDeviceRequest) {
     return await this.devicesService.restore(params.deviceId);
   }
 
   @Delete(':deviceId')
+  @Permissions(['DEVICE.DELETE'])
   async delete(
     @Param() params: FindOneDeviceRequest,
     @Query() query: DeleteDeviceRequest,

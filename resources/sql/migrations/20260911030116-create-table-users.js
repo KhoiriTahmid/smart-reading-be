@@ -42,12 +42,20 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: true,
       },
+      refresh_token_hash: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
       auth_provider: {
         type: Sequelize.STRING(50),
         allowNull: true,
-        defaultValue: 'local',
+        defaultValue: 'email',
       },
       provider_id: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      picture: {
         type: Sequelize.STRING,
         allowNull: true,
       },
