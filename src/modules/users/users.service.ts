@@ -1,5 +1,6 @@
 import {
   ForbiddenException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -21,7 +22,7 @@ import { RoleModel } from '../roles/roles.entity';
 import { DeviceModel } from '../devices/devices.entity';
 import { hash } from 'bcrypt';
 
-const RETURN_COLUMNS_FOR_LOGIN = ['email', 'name', 'userId'];
+const RETURN_COLUMNS_FOR_LOGIN = ['email', 'name', 'userId', 'isEmailVerified'];
 const EXCLUDED_USER_COLUMNS = [
   'passwordHash',
   'refreshTokenHash',
@@ -97,6 +98,15 @@ export class UsersService {
     return result;
   }
 
+  async findOneWithPassword({ userId }: FindOneUserRequest) {
+    const result = await this.userModel.findOne({
+      where: { userId },
+      attributes: ['userId', 'passwordHash', 'isEmailVerified'],
+    });
+    if (!result) throw new NotFoundException();
+    return result;
+  }
+
   async findOneByEmail(email: string) {
     const result = await this.userModel.findOne({
       where: { email },
@@ -126,6 +136,7 @@ export class UsersService {
       roleId,
       authProvider: 'email',
       userId: uuidv4(),
+      isEmailVerified: false,
     });
 
     const user = await this.userModel.findOne({
@@ -150,6 +161,7 @@ export class UsersService {
       roleId,
       authProvider: 'google',
       userId: uuidv4(),
+      isEmailVerified: true,
     };
     const result = await this.userModel.create(data, {});
 
@@ -192,6 +204,36 @@ export class UsersService {
       where: { userId },
       returning: false,
     });
+    return result;
+  }
+
+  async markEmailAsVerified(userId: string) {
+    const result = await this.userModel.update(
+      { isEmailVerified: true },
+      { where: { userId } },
+    );
+    if (!result) throw new NotFoundException('email not registered');
+
+    const user = await this.findOne({ userId });
+    return user;
+  }
+
+  async updatePassword({
+    userId,
+    newPassword,
+  }: {
+    userId: string;
+    newPassword: string;
+  }) {
+    const passwordHash = await hash(
+      newPassword,
+      Number(process.env.BCRYPT_SALT_ROUNDS),
+    );
+
+    const result = await this.userModel.update(
+      { passwordHash },
+      { where: { userId } },
+    );
     return result;
   }
 

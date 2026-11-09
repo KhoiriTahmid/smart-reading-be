@@ -28,12 +28,17 @@ import { User } from 'src/decorators/user.decorator';
 import { UserModel } from '../users/users.entity';
 import {
   AuthTokensResponse,
+  ForgotPasswordRequest,
   GoogleLoginRequest,
   LoginRequest,
   LogoutResponse,
+  MessageResponse,
   RedirectParam,
   RefreshTokenRequest,
+  ResendVerificationRequest,
+  ResetPasswordRequest,
   SignupRequest,
+  VerifyEmailQuery,
 } from './auth.contract';
 import { AuthService } from './auth.service';
 
@@ -120,13 +125,42 @@ export class AuthController {
     description: 'Account created and authenticated.',
   })
   @ApiConflictResponse({ description: 'Email is already registered' })
-  async signupByEmail(
-    @Body() body: SignupRequest,
+  async signupByEmail(@Body() body: SignupRequest): Promise<MessageResponse> {
+    return await this.authService.signupByEmail(body);
+  }
+
+  @Post('resend-verification')
+  async ResendVerifEmail(
+    @Body() body: ResendVerificationRequest,
+  ): Promise<MessageResponse> {
+    return await this.authService.resendVerificationEmail(body.email);
+  }
+
+  @Get('verify-email')
+  async verifEmail(
+    @Query() query: VerifyEmailQuery,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<AuthTokensResponse> {
-    const tokens = await this.authService.signupByEmail(body);
+  ): Promise<AuthTokensResponse | void> {
+    const tokens = await this.authService.verifyEmail(query.token);
     this.setAuthCookies(res, tokens);
-    return tokens;
+    if (query.isRedirect === false) return tokens;
+
+    console.info('redirected----');
+    return res.redirect(`${process.env.FRONTEND_URL}`);
+  }
+
+  @Post('forgot-password')
+  async sendResetPassword(
+    @Body() body: ForgotPasswordRequest,
+  ): Promise<MessageResponse> {
+    return await this.authService.forgotPassword(body.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(
+    @Body() body: ResetPasswordRequest,
+  ): Promise<MessageResponse> {
+    return await this.authService.resetPassword(body);
   }
 
   @Get('signin-by-google')

@@ -86,6 +86,13 @@ export class UserModel extends BaseModel {
   declare picture?: string;
 
   @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  })
+  declare isEmailVerified: boolean;
+
+  @Column({
     type: DataType.JSONB,
     allowNull: true,
   })

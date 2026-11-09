@@ -10,6 +10,51 @@ import {
   MinLength,
 } from 'class-validator';
 
+export class VerifyEmailQuery {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? undefined : value === 'true' || value === true,
+  )
+  @IsBoolean()
+  isRedirect?: boolean;
+}
+
+export class ResendVerificationRequest {
+  @ApiProperty()
+  @IsEmail()
+  @IsNotEmpty()
+  email!: string;
+}
+
+export class ForgotPasswordRequest extends ResendVerificationRequest {}
+
+export class ResetPasswordRequest {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+
+  @ApiProperty({ minLength: 8, maxLength: 128 })
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  newPassword!: string;
+}
+
+export class MessageResponse {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  message!: string;
+}
+
 export class LoginRequest {
   @ApiProperty({ example: 'admin@gmail.com' })
   @IsEmail()

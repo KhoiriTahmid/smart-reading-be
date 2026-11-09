@@ -8,9 +8,10 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { JWTStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [UsersModule, PassportModule, JwtModule.register({})],
+  imports: [UsersModule, MailModule, PassportModule, JwtModule.register({})],
   providers: [
     AuthService,
     GoogleStrategy,

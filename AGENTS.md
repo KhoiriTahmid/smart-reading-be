@@ -1,6 +1,6 @@
 # AGENTS.md
 
-NestJS 11 + Sequelize/PostgreSQL REST API for a smart reading device ("BukuSaku"). TypeScript, yarn 1.x (`yarn.lock` — use yarn, not npm). Auth is not implemented yet.
+NestJS 11 + Sequelize/PostgreSQL REST API for a smart reading device. TypeScript, yarn 1.x (`yarn.lock` — use yarn, not npm). Auth is not implemented yet.
 
 ## Commands
 
